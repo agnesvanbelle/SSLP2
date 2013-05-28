@@ -3,25 +3,26 @@ from nltk.tree import *
 from nltk.draw import tree
 from  nltk import treetransforms
 
-inv_extension = "-Inv"
+normal_brackets = '[]'
+inv_brackets = '<>'
 
-def make_syntax_chart(sentence_tree,  sc, col=0, row=None) :
-  
+# put the initial tree nodes in a CYK-like chart
+def make_syntax_chart(sentence_tree,  sc, col=0, row=None) :  
 
   if row == None :
-    row = len(sentence_tree.leaves())
-  
+    row = len(sentence_tree.leaves())  
 
-      
+  # if is not a leaf
   if isinstance(sentence_tree, tree.Tree):
     #print "%s %d %d" % (sentence_tree.node, col, row-1)
     
+    # add to syntax chart
     if (col, row-1) in sc :
       sc[(col, row-1)] = sentence_tree.node + ":" + sc[(col, row-1)]
     else:
       sc[(col, row-1)] =  sentence_tree.node        
    
-    
+    # add each kid (a node can have 1 or 2 kids) recursively
     lengthkids = 0
     for i in range (0, len(sentence_tree)):
       
@@ -36,15 +37,14 @@ def make_syntax_chart(sentence_tree,  sc, col=0, row=None) :
         
       make_syntax_chart(sentence_tree[i], sc, col+lengthkidsprev, length + col+lengthkidsprev)
       #print "%s  %s  %d" % (sentence_tree[i], sentence_tree[i].node ,len(sentence_tree[i]))
-    
-  else :
-    #print sentence_tree
-    return
+
+
   
 def printdict(d) :
   for key, value in d.iteritems():    
     print "%s --> %s" % (key, value)
 
+# checks if a phrase is also continuous in the reordered format
 # span should be a tuple where span[1] >= span[0]
 def valid_phrase(span, reorderings_list):
   len_phrase = max(reorderings_list[span[0]:span[1]+1]) - min(reorderings_list[span[0]:span[1]+1])  
