@@ -17,10 +17,10 @@ def reform_sentences_bitpar(sentences, bitpar_sentences):
 #reform_sentences_bitpar('europarl-v7.nl-en.test.en', 'bitpar_sentences')
 
 #bitpar has to be installed in the machine
-def get_bitpar_parses(k, output_filename):
+get_pitpar_parses(k, binary_rules, unary_rules,test_sentences, parses_filename)
 	
 	f_out = open(output_filename, 'w')
-	bitpar_command = 'bitpar'
+	bitpar_command = 'bitpar -b '+k+' '+unary_rules+' '+binary_rules+' '+test_sentences
 	p = subprocess.Popen(bitpar_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 	for line in iter(p.stdout.readline, ''):
 		f_out.write(line)
@@ -63,7 +63,9 @@ def get_sentence_indexes(parsed_sentence):
 
 
 #creates the reordered sentences and indexes files
-def get_sentence_from_parses(parses, sentences, indexes, k):
+def get_sentence_indexes_from_parses(parses, sentences, indexes, probabilites,k):
+	
+	#TODO: write to dictionaries instead of files???
 	f_parses = open(parses, 'r')
 	f_sentences = open(sentences, 'w')
 	f_indexes = open(indexes, 'w')
@@ -71,6 +73,7 @@ def get_sentence_from_parses(parses, sentences, indexes, k):
 		#empty line
 		if parse == '':
 			f_sentences.write('\n')
+			f_indexes.write('\n')
 		sentence, indexes = get_sentence_indexes(parse)
 		f_sentences.write(sentence+'\n')
 		f_indexes.write(indexes+'\n')
@@ -85,10 +88,15 @@ def get_sentence_from_parses(parses, sentences, indexes, k):
 	#test_sentences: test sentences in 'normal format'
 	#k : k best parses
 #output:
-	#file containing the k-best parses for each sentence
-def testing(binary_rules, unary_rules,test_sentences, output, k):
-	temp_reformed = 'bitpar_sentences.txt'
-	reform_sentences(test_sentences, temp_reformed)
-	parses_filename = k+'-best_parses'
-	get_pitpar_parses(k, parses_filename)
+	#files containing the k-best parses for each sentence (sentences, indexes, probabilities)
+def testing(binary_rules, unary_rules,test_sentences, sentences, indexes, probabilities, k):
+	sentences_reformed = 'bitpar_sentences.txt'
+	reform_sentences(test_sentences, sentences_reformed)
+	parses = k+'-best_parses'
+	get_pitpar_parses(k, binary_rules, unary_rules,sentences_reformed, parses)
+	
+	#sentences: the file to which we output the k-best sentences
+	#indexes : the file to which we output the k-best indexes
+	#probabilites : the file to which we output the k-best probabilities
+	get_sentence_indexes_from_parses(parses, sentences, indexes, probabilites, k)
 	
