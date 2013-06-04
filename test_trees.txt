@@ -1,0 +1,1 @@
+( (S (NP (N man)) (VP (V bites) (NP (N dog)))) )

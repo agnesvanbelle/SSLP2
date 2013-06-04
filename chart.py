@@ -4,14 +4,20 @@ from nltk.draw import tree
 from  nltk import treetransforms
 from collections import defaultdict
 import re
+import subprocess
 
 
-normal_brackets = '[]'
-inv_brackets = '<>'
+inv_suffix = "<"
 
+filename_alignments = "test_alignments.txt" #"europarl-v7.nl-en.align.en-en2"
+filename_sentence_trees = "test_trees.txt" # "europarl-v7.nl-en.en.parse"
 
+filename_bitpar_grammar = "bitpar_grammar.dat"
+filename_bitpar_lexicon = "bitpar_lexicon.dat"
+
+  
 def make_itg():
-	pass
+  pass
 # put the initial tree nodes in a CYK-like chart
 def make_syntax_chart(sentence_tree,  syntax_chart, col=0, row=None) :
 
@@ -76,6 +82,7 @@ def make_parse_chart(sentence_tree, reorderings_list) :
  #   parse_chart[key].append(syntax_chart.get(key))
   for i in range(0, len_sentence):
     parse_chart[(i,i)] = [(syntax_chart[(i,i)],( 0, 0, 0))]
+    
   print "parse chart:"
   printdict(parse_chart)
 
@@ -92,10 +99,10 @@ def make_parse_chart(sentence_tree, reorderings_list) :
           split_right = (span_startpos+split_startpos+1 , span_endpos)
           print "l: %s , r: %s " % (split_left, split_right)
 
-          parent_extension = ""
+          suffix = ""
           if is_inverted(split_left, split_right, reorderings_list):
-            parent_extension = "_INV"
-
+            suffix = inv_suffix
+            
           leftkids = parse_chart[split_left]
           rightkids = parse_chart[split_right]
 
@@ -110,9 +117,9 @@ def make_parse_chart(sentence_tree, reorderings_list) :
               if not not parent_rule:
                 print "parent_rule: %s" % parent_rule
                 #if parent_rule[0] not in parse_chart[span]:
-		parse_chart[span].extend( [(parent_rule[0] +  parent_extension, (split_right[0], l, r))])
-		print "added %s at place %s" % (parent_rule, span)
-		print "parse chart there now %s\n" % parse_chart[span]
+                parse_chart[span].extend( [(parent_rule[0] + suffix, (split_right[0], l, r))])
+                print "added %s at place %s" % (parent_rule, span)
+                print "parse chart there now %s\n" % parse_chart[span]
               
 
       else :
@@ -150,12 +157,12 @@ def get_parent_syntax_chart(syntax_chart, parse_chart,  len_sentence, parent_spa
           right_missing_col = parent_span[1]+1
           right_missing = parse_chart[(right_missing_col, right_missing_row)]
           print "right_missing: %s at %s" % (right_missing, (right_missing_col, right_missing_row))
-	  
-	  result = []
-	  for r in range(0, len(right_missing)):
-	    if not too_many_combinations(left_super[0][0], right_missing[r][0], max_combined_rules):
-	      result.extend( ["(" + left_super[0][0] + "/" + right_missing[r][0] + ")"])
-	  return result
+    
+          result = []
+          for r in range(0, len(right_missing)):
+            if not too_many_combinations(left_super[0][0], right_missing[r][0], max_combined_rules):
+              result.extend( ["(" + left_super[0][0] + "/" + right_missing[r][0] + ")"])
+          return result
     
                       
       #  missing left part
@@ -171,11 +178,11 @@ def get_parent_syntax_chart(syntax_chart, parse_chart,  len_sentence, parent_spa
           left_missing = parse_chart[(left_missing_col, left_missing_row)]
           print "left_missing: %s at %s" % (left_missing, (left_missing_col, left_missing_row))
           
-	  result = []
-	  for l in range(0, len(left_missing)):
-	    if not too_many_combinations(right_super[0][0], left_missing[l][0], max_combined_rules):
-	      result.extend( ["(" + right_super[0][0] + "\\" + left_missing[l][0] + ")"])
-	  return result
+    result = []
+    for l in range(0, len(left_missing)):
+      if not too_many_combinations(right_super[0][0], left_missing[l][0], max_combined_rules):
+        result.extend( ["(" + right_super[0][0] + "\\" + left_missing[l][0] + ")"])
+    return result
               
   return ""
 
@@ -184,32 +191,35 @@ def get_rules_from_parse_chart(parse_chart, sentence_tree):
 
   sentence_list = sentence_tree.leaves()
   len_sentence = len(sentence_list)
-  binary_rules = [] 
-  unary_rules = []
+  grammar_rules = [] 
+  lexical_rules = []
 
   for span_size in range(len_sentence-1, -1, -1):
-	  for span_startpos in range(0, len_sentence-span_size):
-		  span_endpos = span_startpos+span_size
-		  span = (span_startpos, span_endpos)
-		  print " ==> span_size: %d \n span: %s " % (span_size, span)
-				  
-		  parents = parse_chart[(span)]
-		  for p in range(0, len(parents)):
-		    parent = parents[p]
-		    LHS = parent[0]
-		    if parent[1][0]-1 >= 0: 
-		      RHS1_loc = (span_startpos, parent[1][0]-1)
-		      RHS2_loc = (parent[1][0], span_endpos)
-		      RHS1 = parse_chart[RHS1_loc][parent[1][1]][0]
-		      RHS2 = parse_chart[RHS2_loc][parent[1][2]][0]
-		      binary_rules.append((LHS,(RHS1,RHS2)))
-		      print (LHS,(RHS1,RHS2))
-		    else:
-		      unary_rules.append((LHS,sentence_list[span_startpos]))
-		      print (LHS,sentence_list[span_startpos])
+    for span_startpos in range(0, len_sentence-span_size):
+      span_endpos = span_startpos+span_size
+      span = (span_startpos, span_endpos)
+      print " ==> span_size: %d \n span: %s " % (span_size, span)
+          
+      parents = parse_chart[(span)]
+      for p in range(0, len(parents)):
+        parent = parents[p]
+        LHS = parent[0]        
+        
+        if parent[1][0]-1 >= 0: #binary rule          
+          
+          RHS1_loc = (span_startpos, parent[1][0]-1)
+          RHS2_loc = (parent[1][0], span_endpos)
+          RHS1 = parse_chart[RHS1_loc][parent[1][1]][0]
+          RHS2 = parse_chart[RHS2_loc][parent[1][2]][0]
+          grammar_rules.append((LHS,(RHS1,RHS2)))       
+          print  (LHS,(RHS1,RHS2))
+          
+        else: 
+          lexical_rules.append((LHS,sentence_list[span_startpos]))
+          print (LHS,sentence_list[span_startpos])
 
 
-  return [binary_rules,unary_rules]
+  return [grammar_rules,lexical_rules]
 
 def too_many_combinations(leftpart, rightpart, max_combined_rules):
   return len(filter(lambda l:  not l or len(l[0])<max_combined_rules, map(lambda a : re.findall(r"[\\/+]+",  a), [leftpart,rightpart]))) < 2
@@ -236,29 +246,115 @@ def open_train_files(fn_align_perms, fn_sentence_trees):
   return [align_perms, sentence_trees]
 
 #get the next line of each file
-def load_next_line(self, align_perms, sentences, sentence_trees):
+def load_next_line( align_perms, sentence_trees):
 
   assert(align_perms and sentence_trees)
     
-  line_reorderings = align_perms.readline()
-  line_sentence_trees = sentence_trees.readline()
+  line_reorderings = align_perms.readline().rstrip()
+  line_sentence_trees = sentence_trees.readline().rstrip()
 
-  if not line_aligns: #EOF
+  if not line_reorderings: #EOF
     print "\nEnd of files reached"
     align_perms.close()
-    sentences.close()
     sentence_trees.close()
-    return []
+    return [[],[]]
 
   else:
     reorderings_list = line_reorderings.split(" ")
-    sentence_tree = Tree(line_sentence[1:-1])    
-    return [reorderings_list, sentence_tree)
+    reorderings_list = [int(r) for r in reorderings_list]
+    print reorderings_list
+    print line_sentence_trees[1:-1]
+    sentence_tree = Tree(line_sentence_trees[1:-1])    
+    return [reorderings_list, sentence_tree]
     
 
-def construct_grammar_from_files(fn_align_perms, fn_sentence_trees):
+def fill_itg_from_files(fn_alignments, fn_sentence_trees, probalistic):
   
+  
+  itg_grammar_rules = defaultdict(int)
+  itg_lexical_rules = defaultdict(int)
+  itg_lexical_inv = defaultdict(list)
+  
+  itg_lhs_grammar_rules  = defaultdict(int)
+  itg_lhs_lexical_rules  = defaultdict(int)
+  
+  fn_align_perms = "reorderingspermutations.dat"
+  reorder_command_output = subprocess.check_output("cat " + fn_alignments + " | sed \"s/[^ ]*-//g\" > " + fn_align_perms, shell=True) 
+  if not not reorder_command_output:
+    raise Exception("alignments-file %s could not be converted to permutations-file %s" % fn_alignments, fn_align_perms)
+  
+  
+  [align_perms, sentence_trees] = open_train_files(fn_align_perms, fn_sentence_trees)
+  
+  lines_read = ["init","init" ]
+  while lines_read[0]:
+    lines_read = [reorderings_list , sentence_tree] = load_next_line(align_perms, sentence_trees)
+    if lines_read[0]:
+      parse_chart = make_parse_chart(sentence_tree, reorderings_list)
+      [grammar_rules, lexical_rules] = get_rules_from_parse_chart(parse_chart, sentence_tree)
+      #  add rules
+      for grammar_rule in grammar_rules:
+        itg_grammar_rules[grammar_rule] += 1
+        if probalistic:
+          itg_lhs_grammar_rules[grammar_rule[0]] += 1
+        
+      for lexical_rule in lexical_rules:
+        itg_lexical_rules[lexical_rule] += 1
+        itg_lexical_inv[lexical_rule[1]].append(lexical_rule[0])
+         
+        if probalistic:
+          itg_lhs_lexical_rules[grammar_rule[0]] += 1
+    
+  return [itg_grammar_rules, itg_lexical_rules, itg_lexical_inv, itg_lhs_grammar_rules, itg_lhs_lexical_rules]
 
+
+
+def convert_to_pitg(itg_rules, itg_lhs_rules):
+  
+  for key, value in itg_rules.iteritems():
+    itg_rules[key] /= float(itg_lhs_rules[value[0]])
+
+
+def to_bitpar_files(grammar_rules, lexical_rules, lexical_inv):
+  try:
+    bitpar_grammar = open(filename_bitpar_grammar, "wb")
+    bitpar_lexicon  = open(filename_bitpar_lexicon, "wb")
+    
+    for key, value in grammar_rules.iteritems():
+      bitpar_grammar.write("%s %s %s %s\n" %( value , key[0] , key[1][0] , key[1][1]))
+  
+    for key, value in lexical_inv.iteritems():
+      bitpar_lexicon.write("%s" % key)
+      for lhs in value:
+        count_or_prob = lexical_rules[(lhs, key)]
+        bitpar_lexicon.write("\t%s\t%s" % ( lhs, count_or_prob))
+      bitpar_lexicon.write("\n")
+   
+    bitpar_grammar.close()
+    bitpar_lexicon.close()
+  
+  except IOError as e:
+    print "I/O error({0}): {1}".format(e.errno, e.strerror)
+  except:
+    print "Unexpected error:", sys.exc_info()[0]
+    raise
+
+
+  
+  
+  
+def construct_itg(probalistic=False) :  
+  
+  [itg_grammar_rules, itg_lexical_rules, itg_lexical_inv, itg_lhs_grammar_rules, itg_lhs_lexical_rules] = \
+                fill_itg_from_files(filename_alignments, filename_sentence_trees, probalistic)
+  
+  
+  if probalistic:
+    convert_to_pitg(itg_grammar_rules, itg_lhs_grammar_rules)
+    convert_to_pitg(itg_lexical_rules, itg_lhs_lexical_rules)
+  
+  to_bitpar_files(itg_grammar_rules, itg_lexical_rules, itg_lexical_inv)
+  
 def test() :
   sentence_tree = Tree('(S (NP (N man)) (VP (V bites) (NP (N dog))))')
   reorderings_list = [2, 1, 0]
@@ -272,7 +368,7 @@ def test() :
   
   
   #sentence_tree = Tree('(S (A a) (B b ) (C c) (D d))')
-  #reorderings_list = [0,1,2,3]
+  #reorderings_list = [0,1,3,2]
   
   #treetransforms.chomsky_normal_form(sentence_tree, factor='right', horzMarkov=None, vertMarkov=0, childChar='|', parentChar='^')
 
@@ -286,6 +382,16 @@ def test() :
 
 
   pc = make_parse_chart(sentence_tree, reorderings_list)
-	
-  [binary_rules, unary_rules] = get_rules_from_parse_chart(pc, sentence_tree)
+  
+  [grammar_rules, lexical_rules] = get_rules_from_parse_chart(pc, sentence_tree)
+  
+  print grammar_rules
+  print lexical_rules
   #sentence_tree.draw()
+  
+
+if __name__ == '__main__':
+  construct_itg()
+  
+  #test()
+  
