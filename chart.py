@@ -207,9 +207,7 @@ def get_rules_from_parse_chart(parse_chart, sentence_tree):
 		    else:
 		      unary_rules.append((LHS,sentence_list[span_startpos]))
 		      print (LHS,sentence_list[span_startpos])
-		      
-#	for i in range(0, len(binary_rules)):
-#	  print binary_rules[i]
+
 
   return [binary_rules,unary_rules]
 
@@ -221,6 +219,45 @@ def too_many_combinations(leftpart, rightpart, max_combined_rules):
 # is larger than the span_startpos of its right child
 def is_inverted(leftspan, rightspan, reorderings_list):
   return reorderings_list[leftspan[1]] > reorderings_list[rightspan[0]]
+
+
+
+#open the input files
+def open_train_files(fn_align_perms, fn_sentence_trees):
+  try:
+    align_perms = open(fn_align_perms)
+    sentence_trees  = open(fn_sentence_trees)
+  except IOError as e:
+    print "I/O error({0}): {1}".format(e.errno, e.strerror)
+  except:
+    print "Unexpected error:", sys.exc_info()[0]
+    raise
+
+  return [align_perms, sentence_trees]
+
+#get the next line of each file
+def load_next_line(self, align_perms, sentences, sentence_trees):
+
+  assert(align_perms and sentence_trees)
+    
+  line_reorderings = align_perms.readline()
+  line_sentence_trees = sentence_trees.readline()
+
+  if not line_aligns: #EOF
+    print "\nEnd of files reached"
+    align_perms.close()
+    sentences.close()
+    sentence_trees.close()
+    return []
+
+  else:
+    reorderings_list = line_reorderings.split(" ")
+    sentence_tree = Tree(line_sentence[1:-1])    
+    return [reorderings_list, sentence_tree)
+    
+
+def construct_grammar_from_files(fn_align_perms, fn_sentence_trees):
+  
 
 def test() :
   sentence_tree = Tree('(S (NP (N man)) (VP (V bites) (NP (N dog))))')
@@ -252,7 +289,3 @@ def test() :
 	
   [binary_rules, unary_rules] = get_rules_from_parse_chart(pc, sentence_tree)
   #sentence_tree.draw()
-
-
-if __name__ == '__main__':
-  test()
