@@ -35,7 +35,7 @@ def get_lm_probs(lm_query_output, output_file):
 
 from nltk import Tree
 import re
-def tree_to_reordered(tree, inv_extension, index = 0):
+def tree_to_reordered0(tree, inv_extension, index = 0):
     """Reorders a sentences according to its itg-tree
     
     Keyword arguments:
@@ -64,7 +64,18 @@ def tree_to_reordered(tree, inv_extension, index = 0):
 
         return reordered_string, reordered_indexes, index
 
-tree_string = Tree('(TOP (S (NP_inv (NNP Ms.) (NNP Haag) ) (VP (VBZ plays) (NP (NNP Elianti) ) ) (. .) ) ) ')
+
+def hamdist(str1, str2):
+	diffs = 0
+	for ch1, ch2 in zip(str1, str2):
+			if ch1 != ch2:
+					diffs += 1
+	return diffs
+        
+def tree_to_reordered(tree, inv_extension):
+	
+
+tree_string = Tree('(S (NP (N man)) (VP< (V bites) (NP (N dog))))')
 reordered_string, reordered, _ =  tree_to_reordered(tree_string, "inv")
 print reordered_string
 print reordered
