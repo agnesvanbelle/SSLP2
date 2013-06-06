@@ -1,3 +1,3 @@
 ( (S (NP (N man)) (VP (V bites) (NP (N dog)))) )
-( (S (ADVP (RB next)) (, ,) (NP (PRP we)) (VP (VBP have) (NP (NP (NNS flags)) (PP (IN of) (NP (NN convenience))))) (. .)) )
+( (S (ADVP (RB next)) (, ,) (NP (PRP we)) (VP (V bites) (NP (NP (NNS flags)) (PP (IN of) (NP (NN convenience))))) (. .)) )
 ( (S (A man) (B bites ) (C man) (D next)) )

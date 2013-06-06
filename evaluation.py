@@ -72,7 +72,7 @@ def hamdist(str1, str2):
 					diffs += 1
 	return diffs
         
-def tree_to_reordered(tree, inv_extension):
+#def tree_to_reordered(tree, inv_extension):
 	
 
 tree_string = Tree('(S (NP (N man)) (VP< (V bites) (NP (N dog))))')
