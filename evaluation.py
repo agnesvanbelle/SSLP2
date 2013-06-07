@@ -1,3 +1,8 @@
+inv_suffix = "<"
+from nltk.tree import *
+from nltk.draw import tree
+from  nltk import treetransforms
+
 #get gold standard alignments from the alignments file
 #input a-b ....
 #output b gold standard reordering.
@@ -13,9 +18,9 @@ def get_gold_alignments(alignments_file, output_file):
 		out_f.write('%s\n' % newline)
 	align_f.close()
 	out_f.close()
-	
 
-#input : the output from the moses lm query 
+
+#input : the output from the moses lm query
 #output : a file containing the lm probability for each sentence
 def get_lm_probs(lm_query_output, output_file):
 	lm_f = open(lm_query_output, 'r')
@@ -26,10 +31,10 @@ def get_lm_probs(lm_query_output, output_file):
 		end_pos = line.index('OOV:')
 		newline = line[start_pos+len(s):end_pos-1]
 		out_f.write('%s\n' % newline)
-	
+
 	lm_f.close()
 	out_f.close()
-	
+
 #get_gold_alignments('europarl-v7.nl-en.test.align.en-en2', 'gold_align')
 #get_lm_probs('lm_query.txt', 'lm_probs')
 
@@ -37,11 +42,11 @@ from nltk import Tree
 import re
 def tree_to_reordered0(tree, inv_extension, index = 0):
     """Reorders a sentences according to its itg-tree
-    
+
     Keyword arguments:
     tree -- nltk tree
     inv_extension -- extension denoting whether a node is inverted
-    
+
     Returns reordered string, indexes and number of leaves"""
     pattern = '%s' % inv_extension # match if contains string
     if not isinstance(tree, Tree): # if terminal node
@@ -71,11 +76,30 @@ def hamdist(str1, str2):
 			if ch1 != ch2:
 					diffs += 1
 	return diffs
-        
-#def tree_to_reordered(tree, inv_extension):
-	
 
-tree_string = Tree('(S (NP (N man)) (VP< (V bites) (NP (N dog))))')
-reordered_string, reordered, _ =  tree_to_reordered(tree_string, "inv")
-print reordered_string
+def tree_to_reordered(sentence_tree, position=0):
+
+  if not isinstance(sentence_tree, tree.Tree): # leaf
+    print "%s"% [position]
+    return [position]
+  elif len(sentence_tree) == 1: # unary rule
+    print "%s"% [position]
+    return [position]
+  else :
+    head = sentence_tree.node
+    if not head[-1:] == inv_suffix :
+      leftchildren = tree_to_reordered(sentence_tree[0], position)
+      rightchildren = tree_to_reordered(sentence_tree[1], position+1)
+    else:
+      leftchildren = tree_to_reordered(sentence_tree[1], position+1)
+      rightchildren = tree_to_reordered(sentence_tree[0], position)
+
+    print "%s, %s"% (leftchildren, rightchildren)
+
+    return  leftchildren + rightchildren
+
+
+#tree_string = Tree('(S (NP (N man)) (VP< (V bites) (NP (N dog))))')
+tree_string = Tree('(A (B< a b) (C c d))')
+reordered =  tree_to_reordered(tree_string)
 print reordered
