@@ -1,0 +1,22 @@
+Compilation instructions:
+	cd BitparSrc/src
+	make
+	cp bitpar ../../
+	cd ../..
+	{run training, testing or evaluation}
+
+Dependencies:
+	python 2.7 with nltk
+	run on deze (where moses is installed)
+	bitpar,	post-process.pl and kendall-tau.pl have to be in the same folder
+	
+# tested with Python 2.7.3 and nltk 2.0.4 
+# on deze.science.uva.nl (Linux 2.6.32 x86_64 (gcc version 4.4.6 (Red Hat 4.4.6-4))
+Training example use:
+python2.7 training.py -a data/train/europarl-v7*align* -p data/train/*parse*
+
+Testing example use:
+	python2.7 testing.py -b bitpar_binary.dat -u bitpar_unary.dat -t /home/sslp13/data/sourceReordering/heldout/europarl-v7.nl-en.test.en  -k 50 -lm /home/sslp13/data/sourceReordering/lm/*.blm --lm_only best_lm --combined best_combined 
+
+Evaluation example use:
+	python2.7 evaluation.py -b {best parse filename} -g \gold standard alignments e.g. 1-2, 2-3} --hamming --kendall

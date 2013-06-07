@@ -1,0 +1,41 @@
+BitPar software
+===============
+
+developed by Helmut Schmid
+
+Copyright (C)
+Institut für maschinelle Sprachverarbeitung
+Universität Stuttgart
+
+BitPar is freely available for research and education.
+
+BitPar is a parser for probabilistic context-free grammars. It is able
+to do full parsing (including the generation of parse forests and the
+computations of inside-outside probabilities) with large PCFGs
+extracted from treebanks.
+
+The implementation of BitPar is described in the paper "Efficient
+Parsing of Highly Ambiguous Context-Free Grammars with Bit Vectors"
+available at http://www.ims.uni-stuttgart.de/~schmid.
+
+Its usage is explained in the Unix man pages in the subdirectory man1.
+
+Installation
+------------
+
+1) Change to the directory src
+   > cd BitPar/src
+
+2) Compile the parser by calling GNU make
+   > make
+
+3) Copy the program bitpar to its installation directory (e.g. /usr/local/bin)
+
+If you get an error message saying that some hashing libraries could
+not be found, you should comment the following line
+  SGILIB = -DSGIext
+in the file "Makefile".
+
+
+Please send questions, comments and bug reports to
+schmid@ims.uni-stuttgart.de

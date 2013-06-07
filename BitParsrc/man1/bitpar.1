@@ -1,0 +1,199 @@
+.TH bitpar 1 "February 2003" "" "BitPar"
+.SH NAME
+bitpar \- A parser for treebank grammars with traces
+.SH SYNOPSIS
+.B bitpar
+.I grammar
+.I lexicon
+[
+.I infile
+[
+.I outfile
+]]
+.SH OPTIONS
+.TP
+.B \-o
+Print parse forests. (By default, BitPar just parses the input without
+generating output.)
+.TP
+.B \-s sym
+Use the symbol
+.I sym
+as start symbol rather than the first symbol of the grammar file.
+.TP
+.B \-p
+This option tells the parser that the grammar and the lexicon contain
+frequencies. Without this option, the parser expects a symbolic
+grammar rather than a PCFG. Many other options implicitly set the -p
+option: -v -ip -vp -f -b -em
+.TP
+.B \-v
+Print the Viterbi parse (implies option -p).
+.TP
+.B \-u file
+Read possible part-of-speech tags of unknown words from
+.I file.
+Each line of the file contains a tag.
+.TP
+.B \-w file
+The deterministic finite state automaton stored in
+.I file
+is to be used for the classification of unknown words. The parser
+estimates POS tag probabilities for each class of unknown words from
+the POS tag probabilities of the words in the lexicon belonging to the
+same word class. Only POS tags listed in the argument file of option
+-u are possible tags of unknown words.
+.TP
+.B \-S w
+Sets the wordclass smoothing weight to w. The default is 1. The parser
+smooths the POS tag probabilities of a word by adding the tag
+probabilities of the corresponding word class weighted with the factor
+w to the frequencies of the word in the lexicon file.
+.TP
+.B \-tg
+This option has to be used if the grammar contains rules of the form
+VP V *NP* where *NP* is a trace symbol which (implicitly) expands to
+the empty string. The parser ignores the trace symbols during parsing
+and inserts them when the parse is printed.
+.TP
+.B \-ts xy
+This option specifies that trace symbols are enclosed by the
+characters x and y rather than *. The option "-ts '()'" specifies e.g.
+that trace symbols are of the form (NP) or (NP(-NONE-(*))).
+.TP
+.B \-H
+One node of each grammar rule is marked as the head by a preceding ^ symbol.
+.TP
+.B \-l
+The lexicon contains lemma information. The lemma follows the POS tag
+(and the frequency if present).
+.TP
+.B \-b n
+Print the n most probable parse trees rather than a parse forest (implies
+option -p).
+.TP
+.B \-vp
+Print parse forests or n-best parses with Viterbi probabilities
+(implies option -p).
+.TP
+.B \-ip
+Print parse forests with inside probabilities (implies option -p)
+.TP
+.B \-f
+Print parse forests with estimated frequencies (implies option -p).
+.TP
+.B \-em f
+Do EM training using the inside-outside algorithm. f ist the prefix of
+the files, where the output is stored.
+.TP
+.B \-t
+Print trace probabilities (implies options -p and -tg)
+.TP
+.B \-prune t
+Eliminate edges with an estimated frequency below the threshold t.
+(The estimated frequency of an edge is the product of the outside
+probability of the parent multiplied by the inside probability of the
+edge and divided by the inside probability of the root.) This option
+implies option -p.
+.TP
+.B \-t Print trace probabilities.
+.TP
+.B \-rn Print parse forests with rule numbers.
+.TP
+.B \-mf Print parse trees with the highest estimated f-score.
+.TP
+.B \-y
+Print parse forests in YAP format. This option is required if bitpar
+is to be used as context-free parser in the YAP system.
+.TP
+.B \-q
+Suppress status messages
+.TP
+.B \-i
+verbose mode
+.TP
+.B \-h
+Print information about program usage.
+.SH "FILE FORMATS"
+The
+.I grammar
+file contains one grammar rule per line. Each grammar rule starts with
+its frequency (unless the grammar is purely symbolic) followed by the
+parent category (symbol on the left-hand side) and the child
+categories (symbols on the right-hand side). The symbols are separated
+by whitespace. The first symbol in the grammar file is the start
+symbol (unless option -s is used). If the option -H is used, one of
+the child nodes has to be head-marked with a preceding ^ symbol.
+.PP
+The
+.I lexicon
+file contains one lexicon entry per line. Each lexicon entry starts
+with the word (which may contain blanks) followed by a tab and a
+sequence of part-of-speech tags. If the option -p is used, the POS tag
+must be followed by whitespace and a frequency value. If the option -l
+is used, it has to be followed by whitespace and a lemma.
+.PP
+Example:
+.PP
+saw	NN 3 saw	VB 1 saw	VBD 9 see	VBP 1 saw
+.PP
+The
+.I input
+text which is to be parsed has to be in one-word-per-line format. Each
+sentence must be followed by an empty line. Words may contain blanks. 
+.PP
+The
+.I word class automaton
+file has the following format: Lines corresponding to state
+transitions have the form
+.I <state1><tab><char><tab><state2>
+where <state1> and <state2> are numbers indicating the start and the
+target state of a transition, <tab> is a tabulator character and
+<char> is the character which is consumed by the respective
+transition. Lines indicating final states have the form
+.I <state><tab>wordclass<tab><class>
+where <state> is a state number, and <class> is the number of the
+respective word class. State numbers start at 0 and word class numbers
+start at 1. The transitions are sorted by (i) increasing start state
+number and by (ii) the transition symbol (encoded as unsigned char).
+The lines corresponding to the final states are at the end of the file
+and they are sorted by increasing state number.
+.br
+Here is an example automaton which assigns word class 1 to sequences
+of a's and word class 2 to sequences of b's and wordclass 3 to mixed
+sequences of a's and b's.
+.PP
+0	a	1
+.br
+0	b	2
+.br
+1	a	1
+.br
+1	b	3
+.br
+2	a	3
+.br
+2	b	2
+.br
+3	a	3
+.br
+3	b	3
+.br
+1	wordclass	1
+.br
+2	wordclass	2
+.br
+3	wordclass	3
+.PP
+.RE
+.SH "EXIT STATUS"
+.B bitpar
+returns 0 unless some error occurs.
+.SH "SEE ALSO"
+vpf
+.SH AUTHOR
+Helmut Schmid,
+Institute for Computational Linguistics,
+University of Stuttgart,
+Email: schmid@ims.uni-stuttgart.de,
+All Rights Reserved
