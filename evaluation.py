@@ -1,12 +1,11 @@
-inv_suffix = "<"
-from nltk.tree import *
-from nltk.draw import tree
-from  nltk import treetransforms
-
+import os
+import subprocess
+import sys
+import argparse
 #get gold standard alignments from the alignments file
 #input a-b ....
 #output b gold standard reordering.
-def get_gold_alignments(alignments_file, output_file):
+def get_gold_single_alignments(alignments_file, output_file):
 	align_f = open(alignments_file, 'r')
 	out_f = open(output_file, 'w')
 	for line in align_f:
@@ -19,87 +18,90 @@ def get_gold_alignments(alignments_file, output_file):
 	align_f.close()
 	out_f.close()
 
+#script must be in the same folder
+def run_kendall_script(f_gold_new, f_test_new):
+	command='./kendall_tau.pl ' + f_gold_new  + ' ' + f_test_new 
+	p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ 	for line in	p.stdout.readlines():
+		print line
+	retval = p.wait()
 
-#input : the output from the moses lm query
-#output : a file containing the lm probability for each sentence
-def get_lm_probs(lm_query_output, output_file):
-	lm_f = open(lm_query_output, 'r')
-	out_f = open(output_file, 'w')
-	s = 'Total: '
-	for line in lm_f:
-		start_pos = line.index(s)
-		end_pos = line.index('OOV:')
-		newline = line[start_pos+len(s):end_pos-1]
-		out_f.write('%s\n' % newline)
+def eval_kendall_tau(gold_alignments, test_alignments):
+	temp_alignments  ='temp_alignments'
+	get_gold_single_alignments(gold_alignments, temp_alignments)
+	
+	f_gold = open(temp_alignments, 'r')
+	f_test = open(test_alignments, 'r')
+	f_gold_new = open('gold_new', 'w')
+	f_test_new = open('test_new', 'w')
+	average = 0
+	total=0
+	for gold in f_gold:
+		test = f_test.readline()
+		if test == 'nil\n':
+			continue
+		#dist = distance(gold, test)
+		if len(gold.split()) != len(test.split()):
+			continue
+		f_gold_new.write(gold)
+		f_test_new.write(test)
+	
+	os.remove(temp_alignments)
+	f_gold.close()
+	f_test.close()
+	f_test_new.close()
+	f_gold_new.close()
+	run_kendall_script('gold_new', 'test_new')
+	os.remove('gold_new')
+	os.remove('test_new')
 
-	lm_f.close()
-	out_f.close()
-
-#get_gold_alignments('europarl-v7.nl-en.test.align.en-en2', 'gold_align')
-#get_lm_probs('lm_query.txt', 'lm_probs')
-
-from nltk import Tree
-import re
-def tree_to_reordered0(tree, inv_extension, index = 0):
-    """Reorders a sentences according to its itg-tree
-
-    Keyword arguments:
-    tree -- nltk tree
-    inv_extension -- extension denoting whether a node is inverted
-
-    Returns reordered string, indexes and number of leaves"""
-    pattern = '%s' % inv_extension # match if contains string
-    if not isinstance(tree, Tree): # if terminal node
-        return tree, [index], index+1
-    elif len(tree)==1: # if unary rule
-        return tree_to_reordered(tree[0], inv_extension, index)
-    else: # if binary rule
-        left_string, left_indexes, index = tree_to_reordered(tree[0],
-            inv_extension, index)
-        right_string, right_indexes, index = tree_to_reordered(tree[1],
-            inv_extension, index)
-        if re.search(pattern, tree.node): # if inverted rule
-            reordered_string = '%s %s' % (right_string, left_string)
-            right_indexes.extend(left_indexes)
-            reordered_indexes = right_indexes
-        else:
-            reordered_string = '%s %s' % (left_string, right_string)
-            left_indexes.extend(right_indexes)
-            reordered_indexes = left_indexes
-
-        return reordered_string, reordered_indexes, index
-
-
-def hamdist(str1, str2):
+def hamming_distance(gold, test):
 	diffs = 0
-	for ch1, ch2 in zip(str1, str2):
-			if ch1 != ch2:
+	for ch1, ch2 in zip(gold, test):
+			if ch1 == ch2:
 					diffs += 1
-	return diffs
+	return float(diffs)/len(gold)
 
-def tree_to_reordered(sentence_tree, position=0):
+def check_file(filename):
+	try:
+	   with open(filename): pass
+	except IOError:
+		print 'Error: filename ' +filename+' not in current directory'
+		sys.exit()
 
-  if not isinstance(sentence_tree, tree.Tree): # leaf
-    print "%s"% [position]
-    return [position]
-  elif len(sentence_tree) == 1: # unary rule
-    print "%s"% [position]
-    return [position]
-  else :
-    head = sentence_tree.node
-    if not head[-1:] == inv_suffix :
-      leftchildren = tree_to_reordered(sentence_tree[0], position)
-      rightchildren = tree_to_reordered(sentence_tree[1], position+1)
-    else:
-      leftchildren = tree_to_reordered(sentence_tree[1], position+1)
-      rightchildren = tree_to_reordered(sentence_tree[0], position)
+def eval_hamming(gold_alignments, test_alignments):
+	check_file('kendall_tau.pl')
+	temp_alignments  ='temp_alignments'
+	get_gold_single_alignments(gold_alignments, temp_alignments)
+	f_gold = open(temp_alignments, 'r')
+	f_test = open(test_alignments, 'r')	
+	total = 0
+	num=0
+	for gold in f_gold:
+		test = f_test.readline()
+		if test == 'nil\n':
+			continue
+		if len(gold.split()) != len(test.split()):
+			continue
+		total+=hamming_distance(gold, test)
+		num+=1
+	
+	print 'Average (1-)Hamming distance is : ' + str(total/num)
+	
+	f_gold.close()
+	f_test.close()
+	os.remove(temp_alignments)
 
-    print "%s, %s"% (leftchildren, rightchildren)
-
-    return  leftchildren + rightchildren
-
-
-#tree_string = Tree('(S (NP (N man)) (VP< (V bites) (NP (N dog))))')
-tree_string = Tree('(A (B< a b) (C c d))')
-reordered =  tree_to_reordered(tree_string)
-print reordered
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser(description='Evaluate System')
+	parser.add_argument('--kendall',action='store_true', default=False,help='Calculate Kendall tau distance')
+	parser.add_argument('--hamming',action='store_true', default=False, help='Calculate Hamming distance')
+	parser.add_argument('-g', '--gold_standard',help='gold_standard',required=True)
+	parser.add_argument('-b', '--best_parse',help='best_parse',required=True)
+	args = parser.parse_args()
+	if not args.kendall and not args.hamming:
+		print 'Error: please provide the distance metric you want to be calculated'
+	if args.kendall:
+		eval_kendall_tau(args.gold_standard,args.best_parse)
+	if args.hamming:
+		eval_hamming(args.gold_standard,args.best_parse)
